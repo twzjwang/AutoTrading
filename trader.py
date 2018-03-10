@@ -15,30 +15,49 @@ class Trader():
         return sum / n
 
     def train(self, data):
-        moving_average = np.full((len(data), 2), 0)
+        moving_average = np.full((len(data), 3), 0)
         max_value = 0
-        max_ma_a = 5
-        max_ma_b = 20
         for ma_a in range(5,6):
             for ma_b in range(10, 11):
                 for i in range(4,len(data)):
                     if i >= ma_b - 1:
                         moving_average[i][1] = self.count_MA(data, i, ma_b)
+                    if i >= ma_c - 1:
+                        moving_average[i][2] = self.count_MA(data, i, ma_c)
                     moving_average[i][0] = self.count_MA(data, i, ma_a)
         return moving_average
 
     def predict_action(self, index, training_data, moving_average,  hold):
- 
-        action = '0'
-        if (moving_average[index-2][0] < moving_average[index-2][1]) and (moving_average[index-1][0] > moving_average[index-1][1]) and (hold < 1):
-            action = '1'
-        if (moving_average[index-2][0] > moving_average[index-2][1]) and (moving_average[index-1][0] < moving_average[index-1][1]) and (hold > -1):
-            action = '-1'
-        if (moving_average[index-1][0] < moving_average[index-1][1]) and (moving_average[index][0] > moving_average[index][1]) and (hold < 1):
-            action = '1'
-        if (moving_average[index-1][0] > moving_average[index-1][1]) and (moving_average[index][0] < moving_average[index][1]) and (hold > -1):
-            action = '-1'
-        return action
+        action = 0
+
+        weight_a = 1
+        weight_b = 1
+
+        #price cross MA
+        if (training_data[index-1][3] < moving_average[index-1][1]) and (training_data[index][3] > moving_average[index][1]):
+            action = action + weight_a
+        if (training_data[index-1][3] > moving_average[index-1][1]) and (training_data[index][3] < moving_average[index][1]):
+            action = action - weight_a
+        if (training_data[index-1][3] < moving_average[index-1][2]) and (training_data[index][3] > moving_average[index][2]):
+            action = action + weight_a
+        if (training_data[index-1][3] > moving_average[index-1][2]) and (training_data[index][3] < moving_average[index][2]):
+            action = action - weight_a
+
+        #short cross long
+        if (moving_average[index-1][0] < moving_average[index-1][1]) and (moving_average[index][0] > moving_average[index][1]):
+            action = action + weight_b
+        if (moving_average[index-1][0] > moving_average[index-1][1]) and (moving_average[index][0] < moving_average[index][1]):
+            action = action - weight_b
+        if (moving_average[index-1][1] < moving_average[index-1][2]) and (moving_average[index][1] > moving_average[index][2]):
+            action = action + weight_b
+        if (moving_average[index-1][1] > moving_average[index-1][2]) and (moving_average[index][1] < moving_average[index][2]):
+            action = action - weight_b
+
+        if (hold < 1) and (action > 0):
+            return '1'
+        if (hold > -1) and (action < 0):
+            return '-1'
+        return '0'
 
     def re_training(self, data):
         print('re_training')
@@ -67,9 +86,10 @@ if __name__ == '__main__':
     # You can modify it at will.
     training_data = load_data(args.training)
     trader = Trader()
+    ma_a = 5 
+    ma_b = 15
+    ma_c = 120
     moving_average = trader.train(training_data)
-    ma_a = 5
-    ma_b = 20
     training_data_len = len(training_data)    
 
     testing_data = load_data(args.testing)
@@ -82,7 +102,7 @@ if __name__ == '__main__':
             # We will perform your action as the open price in the next day.
             index = len(training_data)
             training_data = np.vstack((training_data, row))
-            moving_average = np.vstack((moving_average, [trader.count_MA(training_data, index, ma_a), trader.count_MA(training_data, index, ma_b)]))
+            moving_average = np.vstack((moving_average, [trader.count_MA(training_data, index, ma_a), trader.count_MA(training_data, index, ma_b), trader.count_MA(training_data, index, ma_c)]))
             action = trader.predict_action(index, training_data, moving_average, hold)
             if action == '1':
                 hold = hold + 1
