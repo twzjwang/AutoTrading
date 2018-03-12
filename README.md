@@ -3,11 +3,11 @@
 Using MA (moving average) to predict trends.
 Time periods used in MA are 5 days, 15days and 120 days.
 
-* signal to buy
+*  buy signals
   * price cross a MA
   * Golden cross
 
-* signal to sell
+*  sell signals
   * a MA cross price
   * Death cross
   
